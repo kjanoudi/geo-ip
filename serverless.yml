@@ -4,7 +4,6 @@ provider:
   name: aws
   runtime: nodejs8.10
   profile: cheddarup
-  region: us-east-1
   memorySize: 256
   iamRoleStatements:
     - Effect: 'Allow'
@@ -25,11 +24,14 @@ plugins:
   - serverless-plugin-warmup
 
 functions:
-  fetchLocationData:
-    handler: handler.fetchLocationData
+  web:
+    handler: handler.web
     warmup: true
     events:
       - http:
           path: location
           method: get
           cors: true
+  logs:
+    handler: handler.logs
+    warmup: true
