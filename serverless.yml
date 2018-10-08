@@ -3,6 +3,8 @@ service: geoip
 provider:
   name: aws
   runtime: nodejs8.10
+  profile: cheddarup
+  region: us-east-1
   memorySize: 256
   iamRoleStatements:
     - Effect: 'Allow'
