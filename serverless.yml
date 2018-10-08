@@ -46,3 +46,7 @@ functions:
   logs:
     handler: handler.logs
     warmup: true
+    events:
+    - cloudwatchLog:
+        logGroup: '/aws/elasticbeanstalk/dev-env-alb/var/log/puma/puma.log'
+        filter: '"host" - "health_check"'
