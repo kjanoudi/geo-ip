@@ -36,6 +36,7 @@ module.exports.logs = function(input, context) {
       context.succeed("Control message handled successfully");
       return;
     }
+    console.log("Posting to ES");
 
     // post documents to the Amazon Elasticsearch Service
     post(elasticsearchBulkData, function(error, success, statusCode, failedItems) {
@@ -116,7 +117,7 @@ function transform(payload) {
     source["@log_stream"] = payload.logStream;
 
     const ip = logEvent.message["ip"];
-    console.log("Checking for ip: ", ip);
+    console.log("Checking for ip: ", source, logEvent);
     if (ip) {
       source["location"] = await fetchLocationData(ip);
     }
@@ -128,6 +129,7 @@ function transform(payload) {
 
     bulkRequestBody += [JSON.stringify(action), JSON.stringify(source)].join("\n") + "\n";
   });
+  console.log("Returning from transform");
   return bulkRequestBody;
 }
 
