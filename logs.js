@@ -14,7 +14,7 @@ var endpoint = "vpc-cheddar-logging-ebyqdwbd2xobhidortzliqcb34.us-east-1.es.amaz
 
 module.exports.logs = function(input, context) {
   // decode input from base64
-  console.log('Execution started for logs function');
+  console.log("Execution started for logs function");
   var zippedInput = new Buffer(input.awslogs.data, "base64");
 
   // decompress the input
@@ -26,7 +26,7 @@ module.exports.logs = function(input, context) {
 
     // parse the input from JSON
     var awslogsData = JSON.parse(buffer.toString("utf8"));
-
+    console.log("About to transform");
     // transform the input to Elasticsearch documents
     var elasticsearchBulkData = transform(awslogsData);
 
@@ -64,14 +64,18 @@ module.exports.logs = function(input, context) {
 
 const fetchLocationData = async ip => {
   if (!cityLookup) {
+    console.log("Loading city db");
     cityLookup = await openDb("./GeoLite2-City.mmdb");
   }
   if (!countryLookup) {
+    console.log("Loading country db");
     countryLookup = await openDb("./GeoLite2-Country.mmdb");
   }
 
   try {
+    console.log("Looking up city");
     const cityData = await cityLookup.get(ip);
+    console.log("Looking up country");
     const countryData = await countryLookup.get(ip);
     const city = pick(cityData, ["city.names.en", "location", "postal", "subdivisions[0].names.en"]);
     const country = pick(countryData, ["country.names.en"]);
@@ -81,6 +85,7 @@ const fetchLocationData = async ip => {
       country: country
     };
   } catch (e) {
+    console.log("CAught", e);
     return null;
   }
 };
@@ -91,7 +96,7 @@ function transform(payload) {
   }
 
   var bulkRequestBody = "";
-
+  console.log("In transform");
   payload.logEvents.forEach(async function(logEvent) {
     var timestamp = new Date(1 * logEvent.timestamp);
 
@@ -109,7 +114,9 @@ function transform(payload) {
     source["@owner"] = payload.owner;
     source["@log_group"] = payload.logGroup;
     source["@log_stream"] = payload.logStream;
+
     const ip = logEvent.message["ip"];
+    console.log("Checking for ip: ", ip);
     if (ip) {
       source["location"] = await fetchLocationData(ip);
     }

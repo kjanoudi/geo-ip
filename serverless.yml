@@ -46,6 +46,8 @@ functions:
   logs:
     handler: handler.logs
     warmup: true
+    memorySize: 512
+    timeout: 30
     events:
     - cloudwatchLog:
         logGroup: '/aws/elasticbeanstalk/dev-env-alb/var/log/puma/puma.log'
