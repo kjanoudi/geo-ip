@@ -110,7 +110,7 @@ async function transform(payload) {
     var timestamp = new Date(1 * logEvent.timestamp);
 
     // index name format: cwlprod-YYYY.MM.DD
-    const indexLogGroup = payload.logGroup.replace("/", "--");
+    const indexLogGroup = payload.logGroup.replace(/\//g, '--');
     var indexName = [
       indexLogGroup + timestamp.getUTCFullYear(), // year
       ("0" + (timestamp.getUTCMonth() + 1)).slice(-2), // month
