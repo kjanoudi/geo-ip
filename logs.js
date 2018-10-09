@@ -5,6 +5,7 @@ var crypto = require("crypto");
 const bluebird = require("bluebird");
 const maxmind = require("maxmind");
 const pick = require("lodash.pick");
+const get = require("lodash.get");
 const openDb = bluebird.promisify(maxmind.open);
 
 let cityLookup,
@@ -14,10 +15,7 @@ var endpoint = "vpc-cheddar-logging-ebyqdwbd2xobhidortzliqcb34.us-east-1.es.amaz
 
 module.exports.logs = function(input, context) {
   // decode input from base64
-  console.log("Execution started for logs function");
-  console.log("Env: ", process.env);
   if (!input && input.awslogs && input.awslogs.data) {
-    console.log("Received unexpected message: ", input);
     context.fail("Received unexpected message");
     return;
   }
@@ -32,7 +30,6 @@ module.exports.logs = function(input, context) {
 
     // parse the input from JSON
     var awslogsData = JSON.parse(buffer.toString("utf8"));
-    console.log("About to transform");
     // transform the input to Elasticsearch documents
     var elasticsearchBulkData = await transform(awslogsData);
 
@@ -42,7 +39,6 @@ module.exports.logs = function(input, context) {
       context.succeed("Control message handled successfully");
       return;
     }
-    console.log("Posting to ES");
 
     // post documents to the Amazon Elasticsearch Service
     post(elasticsearchBulkData, function(error, success, statusCode, failedItems) {
@@ -71,23 +67,15 @@ module.exports.logs = function(input, context) {
 
 const fetchLocationData = async ip => {
   try {
-    console.log("Looking up city");
     const cityData = await cityLookup.get(ip);
-    console.log("Looking up country");
     const countryData = await countryLookup.get(ip);
-    const city = pick(cityData, ["city.names.en", "location", "postal", "subdivisions[0].names.en"]);
-    const country = pick(countryData, ["country.names.en"]);
-    console.log('City: ', city);
-    console.log('Country: ', country);
-    console.log('City data', cityData);
-    console.log('Country data', countryData);
     return {
-      ip: ip,
-      city: city,
-      country: country
+      location: cityData.location,
+      postal: cityData.postal,
+      state: get(cityData, 'subdivisions[0].names.en'),
+      country: get(countryData, 'country.names.en')
     };
   } catch (e) {
-    console.log("CAught", e);
     return null;
   }
 };
@@ -98,18 +86,15 @@ async function transform(payload) {
   }
 
   if (!cityLookup) {
-    console.log("Loading city db");
     cityLookup = await openDb("./GeoLite2-City.mmdb");
     console.log("Loaded city db");
   }
   if (!countryLookup) {
-    console.log("Loading country db");
     countryLookup = await openDb("./GeoLite2-Country.mmdb");
     console.log("Loaded country db");
   }
 
   var bulkRequestBody = "";
-  console.log("In transform");
   for (const logEvent of payload.logEvents) {
     var timestamp = new Date(1 * logEvent.timestamp);
 
@@ -143,7 +128,6 @@ async function transform(payload) {
 
     bulkRequestBody += [JSON.stringify(action), JSON.stringify(source)].join("\n") + "\n";
   }
-  console.log("Returning from transform");
   return bulkRequestBody;
 }
 
@@ -201,17 +185,13 @@ function isNumeric(n) {
 
 function post(body, callback) {
   var requestParams = buildRequest(endpoint, body);
-  console.log("Request started");
   var request = https
     .request(requestParams, function(response) {
-      console.log("Response started");
       var responseBody = "";
       response.on("data", function(chunk) {
-        console.log("chunk: ", chunk);
         responseBody += chunk;
       });
       response.on("end", function() {
-        console.log("end: ", responseBody);
         var info = JSON.parse(responseBody);
         var failedItems;
         var success;
@@ -297,7 +277,6 @@ function buildRequest(endpoint, body) {
     "SignedHeaders=" + signedHeaders,
     "Signature=" + hmac(kSigning, stringToSign, "hex")
   ].join(", ");
-  console.log("Request: ", request);
   return request;
 }
 
