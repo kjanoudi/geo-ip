@@ -15,10 +15,16 @@ var endpoint = "vpc-cheddar-logging-ebyqdwbd2xobhidortzliqcb34.us-east-1.es.amaz
 module.exports.logs = function(input, context) {
   // decode input from base64
   console.log("Execution started for logs function");
+  console.log("Env: ", process.env);
+  if (!input && input.awslogs && input.awslogs.data) {
+    console.log("Received unexpected message: ", input);
+    context.fail("Received unexpected message");
+    return;
+  }
   var zippedInput = new Buffer(input.awslogs.data, "base64");
 
   // decompress the input
-  zlib.gunzip(zippedInput, function(error, buffer) {
+  zlib.gunzip(zippedInput, async function(error, buffer) {
     if (error) {
       context.fail(error);
       return;
@@ -28,7 +34,7 @@ module.exports.logs = function(input, context) {
     var awslogsData = JSON.parse(buffer.toString("utf8"));
     console.log("About to transform");
     // transform the input to Elasticsearch documents
-    var elasticsearchBulkData = transform(awslogsData);
+    var elasticsearchBulkData = await transform(awslogsData);
 
     // skip control messages
     if (!elasticsearchBulkData) {
@@ -64,15 +70,6 @@ module.exports.logs = function(input, context) {
 };
 
 const fetchLocationData = async ip => {
-  if (!cityLookup) {
-    console.log("Loading city db");
-    cityLookup = await openDb("./GeoLite2-City.mmdb");
-  }
-  if (!countryLookup) {
-    console.log("Loading country db");
-    countryLookup = await openDb("./GeoLite2-Country.mmdb");
-  }
-
   try {
     console.log("Looking up city");
     const cityData = await cityLookup.get(ip);
@@ -91,19 +88,31 @@ const fetchLocationData = async ip => {
   }
 };
 
-function transform(payload) {
+async function transform(payload) {
   if (payload.messageType === "CONTROL_MESSAGE") {
     return null;
   }
 
+  if (!cityLookup) {
+    console.log("Loading city db");
+    cityLookup = await openDb("./GeoLite2-City.mmdb");
+    console.log("Loaded city db");
+  }
+  if (!countryLookup) {
+    console.log("Loading country db");
+    countryLookup = await openDb("./GeoLite2-Country.mmdb");
+    console.log("Loaded country db");
+  }
+
   var bulkRequestBody = "";
   console.log("In transform");
-  payload.logEvents.forEach(async function(logEvent) {
+  for (const logEvent of payload.logEvents) {
     var timestamp = new Date(1 * logEvent.timestamp);
 
     // index name format: cwlprod-YYYY.MM.DD
+    const indexLogGroup = payload.logGroup.replace("/", "--");
     var indexName = [
-      payload.logGroup + timestamp.getUTCFullYear(), // year
+      indexLogGroup + timestamp.getUTCFullYear(), // year
       ("0" + (timestamp.getUTCMonth() + 1)).slice(-2), // month
       ("0" + timestamp.getUTCDate()).slice(-2) // day
     ].join(".");
@@ -116,11 +125,12 @@ function transform(payload) {
     source["@log_group"] = payload.logGroup;
     source["@log_stream"] = payload.logStream;
 
-    const ip = logEvent.message["ip"];
-    console.log("Checking for ip: ", source, logEvent);
+    const ip = source["ip"];
+    console.log("Checking for ip: ", ip);
     if (ip) {
       source["location"] = await fetchLocationData(ip);
     }
+    console.log("Location: ", source["location"]);
 
     var action = { index: {} };
     action.index._index = indexName;
@@ -128,7 +138,7 @@ function transform(payload) {
     action.index._id = logEvent.id;
 
     bulkRequestBody += [JSON.stringify(action), JSON.stringify(source)].join("\n") + "\n";
-  });
+  }
   console.log("Returning from transform");
   return bulkRequestBody;
 }
@@ -187,14 +197,17 @@ function isNumeric(n) {
 
 function post(body, callback) {
   var requestParams = buildRequest(endpoint, body);
-
+  console.log("Request started");
   var request = https
     .request(requestParams, function(response) {
+      console.log("Response started");
       var responseBody = "";
       response.on("data", function(chunk) {
+        console.log("chunk: ", chunk);
         responseBody += chunk;
       });
       response.on("end", function() {
+        console.log("end: ", responseBody);
         var info = JSON.parse(responseBody);
         var failedItems;
         var success;
@@ -280,7 +293,7 @@ function buildRequest(endpoint, body) {
     "SignedHeaders=" + signedHeaders,
     "Signature=" + hmac(kSigning, stringToSign, "hex")
   ].join(", ");
-
+  console.log("Request: ", request);
   return request;
 }
 
