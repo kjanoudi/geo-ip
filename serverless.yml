@@ -48,3 +48,9 @@ functions:
     - cloudwatchLog:
         logGroup: '/aws/elasticbeanstalk/dev-env-alb/var/log/puma/puma.log'
         filter: '"host" - "health_check"'
+    - cloudwatchLog:
+        logGroup: '/aws/elasticbeanstalk/staging-env-alb/var/log/puma/puma.log'
+        filter: '"host" - "health_check"'
+    - cloudwatchLog:
+        logGroup: '/aws/elasticbeanstalk/production-env-alb/var/log/puma/puma.log'
+        filter: '"host" - "health_check"'
