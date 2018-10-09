@@ -14,6 +14,7 @@ var endpoint = "vpc-cheddar-logging-ebyqdwbd2xobhidortzliqcb34.us-east-1.es.amaz
 
 module.exports.logs = function(input, context) {
   // decode input from base64
+  console.log('Execution started for logs function');
   var zippedInput = new Buffer(input.awslogs.data, "base64");
 
   // decompress the input

@@ -7,7 +7,8 @@ const openDb = bluebird.promisify(maxmind.open)
 let cityLookup,
   countryLookup = null
 
-module.exports.fetchLocationData = async event => {
+module.exports.web = async event => {
+  console.log('Execution started for web');
   if (event.source === 'serverless-plugin-warmup') {
     console.log('WarmUP - Lambda is warm!')
     return Promise.resolve('Lambda is warm!')
