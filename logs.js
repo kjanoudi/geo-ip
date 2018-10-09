@@ -77,6 +77,10 @@ const fetchLocationData = async ip => {
     const countryData = await countryLookup.get(ip);
     const city = pick(cityData, ["city.names.en", "location", "postal", "subdivisions[0].names.en"]);
     const country = pick(countryData, ["country.names.en"]);
+    console.log('City: ', city);
+    console.log('Country: ', country);
+    console.log('City data', cityData);
+    console.log('Country data', countryData);
     return {
       ip: ip,
       city: city,
@@ -110,7 +114,7 @@ async function transform(payload) {
     var timestamp = new Date(1 * logEvent.timestamp);
 
     // index name format: cwlprod-YYYY.MM.DD
-    const indexLogGroup = payload.logGroup.replace(/\//g, '--');
+    const indexLogGroup = payload.logGroup.replace(/\//g, "--").replace("--aws--elasticbeanstalk--", '');
     var indexName = [
       indexLogGroup + timestamp.getUTCFullYear(), // year
       ("0" + (timestamp.getUTCMonth() + 1)).slice(-2), // month
