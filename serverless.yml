@@ -25,7 +25,6 @@ provider:
         - 'ec2:DescribeNetworkInterfaces'
         - 'ec2:DeleteNetworkInterface'
       Resource: '*'
-  stage: dev
   region: us-east-1
 
 plugins:
