@@ -70,10 +70,11 @@ const fetchLocationData = async ip => {
     const cityData = await cityLookup.get(ip);
     const countryData = await countryLookup.get(ip);
     return {
-      location: cityData.location,
+      city: get(cityData, "city.names.en"),
+      state: get(cityData, "subdivisions[0].names.en"),
       postal: cityData.postal,
-      state: get(cityData, 'subdivisions[0].names.en'),
-      country: get(countryData, 'country.names.en')
+      country: get(countryData, "country.names.en"),
+      location: cityData.location
     };
   } catch (e) {
     return null;
@@ -99,7 +100,7 @@ async function transform(payload) {
     var timestamp = new Date(1 * logEvent.timestamp);
 
     // index name format: cwlprod-YYYY.MM.DD
-    const indexLogGroup = payload.logGroup.replace(/\//g, "--").replace("--aws--elasticbeanstalk--", '');
+    const indexLogGroup = payload.logGroup.replace(/\//g, "--").replace("--aws--elasticbeanstalk--", "");
     var indexName = [
       indexLogGroup + timestamp.getUTCFullYear(), // year
       ("0" + (timestamp.getUTCMonth() + 1)).slice(-2), // month
