@@ -47,10 +47,10 @@ functions:
     events:
     - cloudwatchLog:
         logGroup: '/aws/elasticbeanstalk/dev-env-alb/var/log/puma/puma.log'
-        filter: '"host" - "health_check"'
+        filter: '"host" - "health_check" - "/api/session"'
     - cloudwatchLog:
         logGroup: '/aws/elasticbeanstalk/staging-env-alb/var/log/puma/puma.log'
-        filter: '"host" - "health_check"'
+        filter: '"host" - "health_check"- "/api/session"'
     - cloudwatchLog:
         logGroup: '/aws/elasticbeanstalk/production-env-alb/var/log/puma/puma.log'
-        filter: '"host" - "health_check"'
+        filter: '"host" - "health_check"- "/api/session"'
